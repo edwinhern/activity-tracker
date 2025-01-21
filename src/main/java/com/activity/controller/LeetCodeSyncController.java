@@ -1,17 +1,18 @@
-package com.activity.controller.leetcode;
+package com.activity.controller;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.activity.config.LeetCodeConfig;
-import com.activity.repository.leetcode.LeetCodeUserRepository;
-import com.activity.service.leetcode.LeetCodeSyncService;
+import com.activity.config.leetcode.LeetCodeConfig;
+import com.activity.model.ServiceResponse;
+import com.activity.model.entity.leetcode.LeetCodeUser;
+import com.activity.service.LeetCodeSyncService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -23,10 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @EnableScheduling
 public class LeetCodeSyncController {
-
   private final LeetCodeSyncService leetCodeSyncService;
   private final LeetCodeConfig leetCodeConfig;
-  private final LeetCodeUserRepository userRepository;
 
   @EventListener(ApplicationReadyEvent.class)
   public void onApplicationStart() {
@@ -38,8 +37,13 @@ public class LeetCodeSyncController {
   public void syncStaleUsers() {
     try {
       final String username = leetCodeConfig.getApi().getUsername();
-      userRepository.findByUsername(username)
-          .ifPresent(user -> leetCodeSyncService.syncUserData(user));
+
+      if (username == null) {
+        log.error("Username is not set in the configuration");
+        return;
+      }
+
+      leetCodeSyncService.syncUserData(username);
       log.info("Successfully completed sync for user: {}", username);
     } catch (final Exception e) {
       log.error("Failed to sync user", e);
@@ -48,8 +52,19 @@ public class LeetCodeSyncController {
 
   @GetMapping("/stale")
   @Operation(summary = "Sync stale users", description = "Syncs stale users with LeetCode API")
-  public ResponseEntity<String> manualSyncStaleUsers() {
-    syncStaleUsers();
-    return ResponseEntity.ok("Sync initiated");
+  public ServiceResponse<LeetCodeUser> manualSyncStaleUsers() {
+    try {
+      final String username = leetCodeConfig.getApi().getUsername();
+
+      if (username == null) {
+        log.error("Username is not set in the configuration");
+        return ServiceResponse.failure("Username is not set in the configuration", HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      return leetCodeSyncService.syncUserData(username);
+    } catch (final Exception e) {
+      log.error("Failed to sync user", e);
+      return ServiceResponse.failure("Failed to sync user");
+    }
   }
 }

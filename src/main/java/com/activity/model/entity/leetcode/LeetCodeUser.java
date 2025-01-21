@@ -1,55 +1,64 @@
 package com.activity.model.entity.leetcode;
 
-import java.math.BigDecimal;
-import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+import com.activity.model.entity.BaseEntity;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "users", schema = "leetcode")
 @Data
-public class LeetCodeUser {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
-
-  @Column(name = "leetcode_username", unique = true, nullable = false)
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+public class LeetCodeUser extends BaseEntity {
+  @Column(name = "username", unique = true, nullable = false)
   private String username;
 
-  private Integer totalSolved;
-  private Integer totalQuestions;
-  private Integer totalEasy;
-  private Integer totalMedium;
-  private Integer totalHard;
-  private Integer easySolved;
-  private Integer mediumSolved;
-  private Integer hardSolved;
-  private BigDecimal acceptanceRate;
-  private Integer contributionPoints;
-  private Integer reputation;
-  private Integer globalRanking;
+  @Column(name = "name")
+  private String name;
 
-  @Column(name = "created_at")
-  private ZonedDateTime createdAt;
+  @Column(name = "avatar")
+  private String avatar;
 
-  @Column(name = "updated_at")
-  private ZonedDateTime updatedAt;
+  @Column(name = "country")
+  private String country;
 
-  @PrePersist
-  protected void onCreate() {
-    createdAt = updatedAt = ZonedDateTime.now();
-  }
+  @Column(name = "school")
+  private String school;
 
-  @PreUpdate
-  protected void onUpdate() {
-    updatedAt = ZonedDateTime.now();
-  }
+  @Column(name = "github")
+  private String github;
+
+  @Column(name = "birthday")
+  private String birthday;
+
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+  @OrderBy("createdAt DESC")
+  @Builder.Default
+  private List<TotalProblems> totalProblems = new ArrayList<>();
+
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+  @OrderBy("createdAt DESC")
+  @Builder.Default
+  private List<TotalSolved> totalSolved = new ArrayList<>();
+
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+  @OrderBy("createdAt DESC")
+  @Builder.Default
+  private List<SubmissionStats> submissionStats = new ArrayList<>();
 }
