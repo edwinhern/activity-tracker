@@ -10,6 +10,8 @@ leetcode:
     retry:
       max-attempts: 3
       delay: 1000
+  sync:
+    cron: 0 */1 * * * *
 
 spring:
   application:

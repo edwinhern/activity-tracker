@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.activity.config.leetcode.LeetCodeClient;
-import com.activity.config.leetcode.LeetCodeConfig;
 import com.activity.model.ServiceResponse;
 import com.activity.model.entity.leetcode.LeetCodeUser;
 import com.activity.model.entity.leetcode.SubmissionStats;
@@ -24,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 public class LeetCodeSyncService {
   private final LeetCodeUserRepository userRepository;
   private final LeetCodeClient leetCodeClient;
-  private final LeetCodeConfig leetCodeConfig;
 
   @Transactional
   public ServiceResponse<LeetCodeUser> syncUserData(final String username) {
@@ -39,29 +37,21 @@ public class LeetCodeSyncService {
 
       final LeetCodeUser latestStats = leetCodeClient.fetchUserStats(username);
 
+      // Keep only the latest stats
+      user.getTotalProblems().clear();
+      user.getTotalSolved().clear();
+      user.getSubmissionStats().clear();
+
       // Update user profile information
       updateUserProfile(user, latestStats);
-
-      // Get the first (most recent) stats from the fetched data
-      if (!latestStats.getTotalProblems().isEmpty()) {
-        final TotalProblems newProblems = latestStats.getTotalProblems().get(0);
-        newProblems.setUser(user);
-        user.getTotalProblems().add(newProblems);
-      }
-
-      if (!latestStats.getTotalSolved().isEmpty()) {
-        final TotalSolved newSolved = latestStats.getTotalSolved().get(0);
-        newSolved.setUser(user);
-        user.getTotalSolved().add(newSolved);
-      }
-
-      if (!latestStats.getSubmissionStats().isEmpty()) {
-        final SubmissionStats newStats = latestStats.getSubmissionStats().get(0);
-        newStats.setUser(user);
-        user.getSubmissionStats().add(newStats);
-      }
+      updateUserStats(user, latestStats);
 
       user = userRepository.save(user);
+
+      // Clear collections to prevent circular references in response
+      user.getTotalProblems().forEach(tp -> tp.setUser(null));
+      user.getTotalSolved().forEach(ts -> ts.setUser(null));
+      user.getSubmissionStats().forEach(ss -> ss.setUser(null));
 
       return ServiceResponse.success("Successfully synced user data", user);
     } catch (final Exception e) {
@@ -87,25 +77,6 @@ public class LeetCodeSyncService {
     }
   }
 
-  @Transactional
-  public LeetCodeUser initializeUser() {
-    final String configuredUsername = leetCodeConfig.getApi().getUsername();
-
-    final Optional<LeetCodeUser> user = userRepository.findByUsername(configuredUsername);
-
-    if (user.isEmpty()) {
-      log.info("User not found, initializing new user: {}", configuredUsername);
-      final LeetCodeUser newUser = LeetCodeUser.builder()
-          .username(configuredUsername)
-          .build();
-      return userRepository.save(newUser);
-    }
-
-    log.info("User found: {}", user.get().getUsername());
-
-    return user.get();
-  }
-
   private void updateUserProfile(final LeetCodeUser existingUser, final LeetCodeUser latestStats) {
     existingUser.setName(latestStats.getName());
     existingUser.setAvatar(latestStats.getAvatar());
@@ -113,5 +84,25 @@ public class LeetCodeSyncService {
     existingUser.setSchool(latestStats.getSchool());
     existingUser.setGithub(latestStats.getGithub());
     existingUser.setBirthday(latestStats.getBirthday());
+  }
+
+  private void updateUserStats(final LeetCodeUser user, final LeetCodeUser latestStats) {
+    if (!latestStats.getTotalProblems().isEmpty()) {
+      final TotalProblems newProblems = latestStats.getTotalProblems().get(0);
+      newProblems.setUser(user);
+      user.getTotalProblems().add(newProblems);
+    }
+
+    if (!latestStats.getTotalSolved().isEmpty()) {
+      final TotalSolved newSolved = latestStats.getTotalSolved().get(0);
+      newSolved.setUser(user);
+      user.getTotalSolved().add(newSolved);
+    }
+
+    if (!latestStats.getSubmissionStats().isEmpty()) {
+      final SubmissionStats newStats = latestStats.getSubmissionStats().get(0);
+      newStats.setUser(user);
+      user.getSubmissionStats().add(newStats);
+    }
   }
 }

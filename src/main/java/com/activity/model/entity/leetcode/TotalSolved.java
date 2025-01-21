@@ -1,6 +1,7 @@
 package com.activity.model.entity.leetcode;
 
 import com.activity.model.entity.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,6 +17,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class TotalSolved extends BaseEntity {
+  @JsonBackReference
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id")
   private LeetCodeUser user;

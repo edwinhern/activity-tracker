@@ -1,7 +1,5 @@
 package com.activity.controller;
 
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,32 +25,10 @@ public class LeetCodeSyncController {
   private final LeetCodeSyncService leetCodeSyncService;
   private final LeetCodeConfig leetCodeConfig;
 
-  @EventListener(ApplicationReadyEvent.class)
-  public void onApplicationStart() {
-    leetCodeSyncService.initializeUser();
-    log.info("Initialized LeetCode user on startup");
-  }
-
   @Scheduled(cron = "${leetcode.sync.cron:0 0 */1 * * *}")
-  public void syncStaleUsers() {
-    try {
-      final String username = leetCodeConfig.getApi().getUsername();
-
-      if (username == null) {
-        log.error("Username is not set in the configuration");
-        return;
-      }
-
-      leetCodeSyncService.syncUserData(username);
-      log.info("Successfully completed sync for user: {}", username);
-    } catch (final Exception e) {
-      log.error("Failed to sync user", e);
-    }
-  }
-
-  @GetMapping("/stale")
-  @Operation(summary = "Sync stale users", description = "Syncs stale users with LeetCode API")
-  public ServiceResponse<LeetCodeUser> manualSyncStaleUsers() {
+  @GetMapping("/")
+  @Operation(summary = "Sync Leetcode stats", description = "Syncs user stats with LeetCode API")
+  public ServiceResponse<LeetCodeUser> syncUserStats() {
     try {
       final String username = leetCodeConfig.getApi().getUsername();
 

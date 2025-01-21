@@ -1,13 +1,18 @@
 package com.activity.config.leetcode;
 
+import java.time.Duration;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import io.netty.channel.ChannelOption;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+import reactor.netty.http.client.HttpClient;
 
 @Configuration
 @ConfigurationProperties(prefix = "leetcode")
@@ -43,6 +48,9 @@ public class LeetCodeConfig {
         .baseUrl(api.getBaseUrl())
         .defaultHeader("Referer", "https://leetcode.com/%s".formatted(api.getUsername()))
         .defaultHeader("Content-Type", api.getContentType())
+        .clientConnector(new ReactorClientHttpConnector(HttpClient.create()
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, client.getConnectTimeout())
+            .responseTimeout(Duration.ofMillis(client.getReadTimeout()))))
         .build();
   }
 }

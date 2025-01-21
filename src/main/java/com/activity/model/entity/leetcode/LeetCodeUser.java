@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.activity.model.entity.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -47,16 +48,19 @@ public class LeetCodeUser extends BaseEntity {
   @Column(name = "birthday")
   private String birthday;
 
+  @JsonManagedReference
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
   @OrderBy("createdAt DESC")
   @Builder.Default
   private List<TotalProblems> totalProblems = new ArrayList<>();
 
+  @JsonManagedReference
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
   @OrderBy("createdAt DESC")
   @Builder.Default
   private List<TotalSolved> totalSolved = new ArrayList<>();
 
+  @JsonManagedReference
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
   @OrderBy("createdAt DESC")
   @Builder.Default

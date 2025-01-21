@@ -1,8 +1,10 @@
 package com.activity.config.leetcode;
 
+import java.time.Duration;
 import java.util.Map;
 
 import org.springframework.http.MediaType;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -15,23 +17,21 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Mono;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class LeetCodeClient implements ILeetCodeClient {
+public class LeetCodeClient {
   private final WebClient leetCodeWebClient;
   private final LeetCodeResponseMapper leetCodeResponseMapper;
+  private final LeetCodeConfig leetCodeConfig;
 
-  @Override
-  @Retryable(maxAttempts = 3)
+  @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 1000))
   public LeetCodeUser fetchUserStats(final String username) {
     log.info("Fetching stats for user: {}", username);
 
     final var response = executeGraphQLQuery(LeetCodeQueries.USER_PROFILE,
-        Map.of("username", username))
-        .block();
+        Map.of("username", username));
 
     if (response == null || !response.has("data")) {
       throw new LeetCodeApiException("Failed to fetch user stats");
@@ -40,7 +40,7 @@ public class LeetCodeClient implements ILeetCodeClient {
     return leetCodeResponseMapper.toUserStatsResponse(username, response);
   }
 
-  private Mono<JsonNode> executeGraphQLQuery(final String query, final Map<String, Object> variables) {
+  private JsonNode executeGraphQLQuery(final String query, final Map<String, Object> variables) {
     return leetCodeWebClient.post()
         .contentType(MediaType.APPLICATION_JSON)
         .bodyValue(Map.of(
@@ -48,6 +48,8 @@ public class LeetCodeClient implements ILeetCodeClient {
             "variables", variables))
         .retrieve()
         .bodyToMono(JsonNode.class)
-        .doOnError(error -> log.error("GraphQL query failed", error));
+        .timeout(Duration.ofMillis(leetCodeConfig.getClient().getReadTimeout()))
+        .doOnError(error -> log.error("GraphQL query failed", error))
+        .block();
   }
 }
